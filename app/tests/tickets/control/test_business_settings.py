@@ -37,42 +37,39 @@ class TestBusinessSettingsNavigation:
         request.resolver_match = resolve('/admin/global/settings/')
 
         nav = get_admin_navigation(request)
-        global_settings = next((item for item in nav if str(item.get('label')) == 'Global settings'), None)
-        assert global_settings is not None
+        global_settings = next(item for item in nav if str(item.get('label')) == 'Global settings')
+        business = next(item for item in nav if str(item.get('label')) == 'Business')
+        global_settings_children = [str(child['label']) for child in global_settings['children']]
+        business_children = [str(child['label']) for child in business['children']]
+        assert 'Business' not in global_settings_children
+        assert business_children == ['Business Settings', 'Event vouchers']
 
-        child_labels = [str(child['label']) for child in global_settings['children']]
-        assert 'Business' in child_labels
-        assert 'Settings' in child_labels
-        assert 'System information' in child_labels
-
-        # Verify exact ordering: Settings, Business, System information, Pages, ...
-        settings_idx = child_labels.index('Settings')
-        business_idx = child_labels.index('Business')
-        sysinfo_idx = child_labels.index('System information')
-        assert settings_idx < business_idx < sysinfo_idx
-
-        # Standalone Vouchers must NOT be present in nav
         top_labels = [str(item.get('label')) for item in nav]
+        assert top_labels.index('Business') == top_labels.index('Global settings') + 1
         assert 'Vouchers' not in top_labels
 
     def test_navigation_active_states(self, rf, admin_user):
-        # When visiting Business page
         request = rf.get('/admin/global/business/')
         request.user = admin_user
         request.resolver_match = resolve('/admin/global/business/')
 
         nav = get_admin_navigation(request)
-        global_settings = next((item for item in nav if str(item.get('label')) == 'Global settings'), None)
-        assert global_settings is not None
-        assert global_settings['active'] is True
-
-        business_item = next((c for c in global_settings['children'] if str(c['label']) == 'Business'), None)
-        assert business_item is not None
-        assert business_item['active'] is True
-
-        settings_item = next((c for c in global_settings['children'] if str(c['label']) == 'Settings'), None)
-        assert settings_item is not None
-        assert settings_item['active'] is False
+        global_settings = next(item for item in nav if str(item.get('label')) == 'Global settings')
+        business = next(item for item in nav if str(item.get('label')) == 'Business')
+        assert global_settings['active'] is False
+        assert business['active'] is True
+        business_settings = next(
+            child
+            for child in business['children']
+            if str(child['label']) == 'Business Settings'
+        )
+        event_vouchers = next(
+            child
+            for child in business['children']
+            if str(child['label']) == 'Event vouchers'
+        )
+        assert business_settings['active'] is True
+        assert event_vouchers['active'] is False
 
 
 @pytest.mark.django_db
@@ -104,7 +101,7 @@ class TestBusinessSettingsView:
         assert 'id="tab-organizer_billing"' in content
         assert 'id="tab-ticket_fee"' in content
         assert 'id="tab-billing_validation"' in content
-        assert 'id="tab-event_vouchers"' in content
+        assert 'id="tab-event_vouchers"' not in content
 
         # Check Organizer Billing texts and fields
         assert 'Stripe — Organizer Billing' in content
@@ -118,10 +115,6 @@ class TestBusinessSettingsView:
         # Check Ticket Fee and Billing Validation fields
         assert 'ticket_fee_percentage' in content
         assert 'billing_validation' in content
-
-        # Check Event Vouchers texts and action
-        assert 'Event vouchers are used by platform admins to waive or reduce Eventyay platform fees' in content
-        assert reverse('eventyay_admin:admin.vouchers.add') in content
 
     def test_business_page_renders_vouchers_table(self, staff_client):
         InvoiceVoucher.objects.create(
