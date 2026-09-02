@@ -553,11 +553,6 @@ def get_admin_navigation(request):
             'active': (url.url_name == 'admin.global.settings'),
         },
         {
-            'label': _('Business'),
-            'url': reverse('eventyay_admin:admin.global.business'),
-            'active': (url.url_name == 'admin.global.business' or 'voucher' in url.url_name),
-        },
-        {
             'label': _('System information'),
             'url': reverse('eventyay_admin:admin.config'),
             'active': 'config' in url.url_name,
@@ -600,6 +595,27 @@ def get_admin_navigation(request):
             'active': any(c['active'] for c in global_settings_children),
             'icon': 'wrench',
             'children': global_settings_children,
+        },
+        {
+            'label': _('Business'),
+            'url': reverse('eventyay_admin:admin.global.business'),
+            'active': (
+                url.url_name == 'admin.global.business'
+                or 'voucher' in url.url_name
+            ),
+            'icon': 'briefcase',
+            'children': [
+                {
+                    'label': _('Business Settings'),
+                    'url': reverse('eventyay_admin:admin.global.business'),
+                    'active': url.url_name == 'admin.global.business',
+                },
+                {
+                    'label': _('Event vouchers'),
+                    'url': reverse('eventyay_admin:admin.vouchers'),
+                    'active': 'voucher' in url.url_name,
+                },
+            ],
         },
         {
             'label': _('Task management'),
@@ -704,13 +720,7 @@ def get_admin_navigation(request):
                         'active': ('sudo' in url.url_name),
                     },
                 ],
-            },
-            {
-                'label': _('Event vouchers'),
-                'url': reverse('eventyay_admin:admin.vouchers'),
-                'active': 'voucher' in url.url_name,
-                'icon': 'tags',
-            },
+            }
         ]
     )
 
